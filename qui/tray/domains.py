@@ -363,6 +363,44 @@ class QubesManagerItem(Gtk.ImageMenuItem):
         self.show_all()
 
 
+def highlight_vm(vm_name):
+
+    # HACK to have decorators with arguments
+    # https://blog.miguelgrinberg.com/post/the-ultimate-guide-to-python-decorators-part-iii-decorators-with-arguments
+    def highlight_decorator(func):
+        css = b"""
+@keyframes animated-highlight {
+    from { box-shadow: inset 0px 0px 4px  @theme_selected_bg_color; }
+    to   { box-shadow: inset 0px 0px 10px @theme_selected_bg_color; }
+}
+
+.highlighted {
+    animation: animated-highlight 1s infinite alternate;
+}
+        """
+        # FIXME set style_provider upon class initialization and no in the
+        # highlight_vm function. This is wasteful.
+        style_provider = Gtk.CssProvider()
+        style_provider.load_from_data(css)
+
+        def wrapper(*args):
+            self = args[0]
+            func(*args)
+
+            self.get_style_context().add_provider(
+                style_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+
+            if self.name.vm == vm_name:
+                self.get_style_context().add_class("highlighted")
+            else:
+                self.get_style_context().remove_class("highlighted")
+
+        return wrapper
+    return highlight_decorator
+
+
 class DomainMenuItem(Gtk.ImageMenuItem):
     def __init__(self, vm, app, icon_cache, state=None):
         super().__init__()
@@ -471,6 +509,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         self._set_submenu(state)
 
+    @highlight_vm("sys-net") # FIXME remove hardcode
     def update_stats(self, memory_kb, cpu_usage):
         self.memory.update_state(int(memory_kb))
         self.cpu.update_state(int(cpu_usage))
