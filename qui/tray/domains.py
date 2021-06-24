@@ -92,12 +92,9 @@ class HighlightableDomainSubMenuItem(Gtk.ImageMenuItem):
         }
         highlighted_class = submenu_class_map[hard_coded_submenu_item]
 
-        set_highlight_style(self)
-
-        if vm == hard_coded_vm and isinstance(self, highlighted_class):
-            self.get_style_context().add_class("highlighted")
-        else:
-            self.get_style_context().remove_class("highlighted")
+        highlight_condition = vm == hard_coded_vm\
+                              and isinstance(self, highlighted_class)
+        highlight_if(self, highlight_condition)
 
 
 class PauseItem(HighlightableDomainSubMenuItem):
@@ -391,7 +388,7 @@ class QubesManagerItem(Gtk.ImageMenuItem):
 
         self.show_all()
 
-def set_highlight_style(widget):
+def highlight_if(widget, condition):
     css = b"""
 @keyframes animated-highlight {
 from { box-shadow: inset 0px 0px 4px  @theme_selected_bg_color; }
@@ -402,6 +399,13 @@ to   { box-shadow: inset 0px 0px 10px @theme_selected_bg_color; }
 animation: animated-highlight 1s infinite alternate;
 }
     """
+
+    if condition:
+        widget.get_style_context().add_class("highlighted")
+    else:
+        widget.get_style_context().remove_class("highlighted")
+
+
     # FIXME set style_provider upon class initialization instead.
     # It is wasteful otherwise
     style_provider = Gtk.CssProvider()
@@ -423,12 +427,8 @@ def highlight_vm(vm_name):
             self = args[0]
             func(*args)
 
-            set_highlight_style(self)
-
-            if self.name.vm == vm_name:
-                self.get_style_context().add_class("highlighted")
-            else:
-                self.get_style_context().remove_class("highlighted")
+            highlight_condition = self.name.vm == vm_name
+            highlight_if(self, highlight_condition)
 
         return wrapper
     return highlight_decorator
