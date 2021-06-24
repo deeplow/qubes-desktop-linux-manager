@@ -70,12 +70,41 @@ def show_error(title, text):
     dialog.connect("response", lambda *x: dialog.destroy())
     dialog.show()
 
+class HighlightableDomainSubMenuItem(Gtk.ImageMenuItem):
+    """ Item gets highlighted when requested by the qubes-tutorial """
 
-class PauseItem(Gtk.ImageMenuItem):
+    def __init__(self, vm):
+        super().__init__()
+
+        hard_coded_vm = "sys-net" # FIXME remove hardcoded
+        hard_coded_submenu_item = "pause" # FIXME remove hardcoded
+
+        submenu_class_map = {
+            "pause":    PauseItem,
+            "unpause":  UnpauseItem,
+            "shutdown": ShutdownItem,
+            "restart": RestartItem,
+            "kill": KillItem,
+            "preferences": PreferencesItem,
+            "log": LogItem,
+            "run-terminal": RunTerminalItem,
+            "open-file-manager": OpenFileManagerItem
+        }
+        highlighted_class = submenu_class_map[hard_coded_submenu_item]
+
+        set_highlight_style(self)
+
+        if vm == hard_coded_vm and isinstance(self, highlighted_class):
+            self.get_style_context().add_class("highlighted")
+        else:
+            self.get_style_context().remove_class("highlighted")
+
+
+class PauseItem(HighlightableDomainSubMenuItem):
     ''' Shutdown menu Item. When activated pauses the domain. '''
 
     def __init__(self, vm, icon_cache):
-        super().__init__()
+        super().__init__(vm)
         self.vm = vm
 
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('pause'))
@@ -95,11 +124,11 @@ class PauseItem(Gtk.ImageMenuItem):
                            self.vm.name, str(ex)))
 
 
-class UnpauseItem(Gtk.ImageMenuItem):
+class UnpauseItem(HighlightableDomainSubMenuItem):
     ''' Unpause menu Item. When activated unpauses the domain. '''
 
     def __init__(self, vm, icon_cache):
-        super().__init__()
+        super().__init__(vm)
         self.vm = vm
 
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('unpause'))
@@ -119,11 +148,11 @@ class UnpauseItem(Gtk.ImageMenuItem):
                            self.vm.name, str(ex)))
 
 
-class ShutdownItem(Gtk.ImageMenuItem):
+class ShutdownItem(HighlightableDomainSubMenuItem):
     ''' Shutdown menu Item. When activated shutdowns the domain. '''
 
     def __init__(self, vm, app, icon_cache):
-        super().__init__()
+        super().__init__(vm)
         self.vm = vm
         self.app = app
 
@@ -144,12 +173,12 @@ class ShutdownItem(Gtk.ImageMenuItem):
                            self.vm.name, str(ex)))
 
 
-class RestartItem(Gtk.ImageMenuItem):
+class RestartItem(HighlightableDomainSubMenuItem):
     ''' Restart menu Item. When activated shutdowns the domain and
     then starts it again. '''
 
     def __init__(self, vm, app, icon_cache):
-        super().__init__()
+        super().__init__(vm)
         self.vm = vm
         self.app = app
 
@@ -181,11 +210,11 @@ class RestartItem(Gtk.ImageMenuItem):
                            self.vm.name, str(ex)))
 
 
-class KillItem(Gtk.ImageMenuItem):
+class KillItem(HighlightableDomainSubMenuItem):
     ''' Kill domain menu Item. When activated kills the domain. '''
 
     def __init__(self, vm, icon_cache):
-        super().__init__()
+        super().__init__(vm)
         self.vm = vm
 
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('kill'))
@@ -204,11 +233,11 @@ class KillItem(Gtk.ImageMenuItem):
                        "shutdown qube {0}:\n{1}").format(self.vm.name, str(ex)))
 
 
-class PreferencesItem(Gtk.ImageMenuItem):
+class PreferencesItem(HighlightableDomainSubMenuItem):
     ''' Preferences menu Item. When activated shows preferences dialog '''
 
     def __init__(self, vm, icon_cache):
-        super().__init__()
+        super().__init__(vm)
         self.vm = vm
 
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('preferences'))
@@ -222,9 +251,9 @@ class PreferencesItem(Gtk.ImageMenuItem):
         subprocess.Popen(['qubes-vm-settings', self.vm.name])
 
 
-class LogItem(Gtk.ImageMenuItem):
+class LogItem(HighlightableDomainSubMenuItem):
     def __init__(self, name, path):
-        super().__init__()
+        super().__init__(vm)
         self.path = path
 
         img = Gtk.Image.new_from_file(
@@ -239,10 +268,10 @@ class LogItem(Gtk.ImageMenuItem):
         subprocess.Popen(['qubes-log-viewer', self.path])
 
 
-class RunTerminalItem(Gtk.ImageMenuItem):
+class RunTerminalItem(HighlightableDomainSubMenuItem):
     ''' Run Terminal menu Item. When activated runs a terminal emulator. '''
     def __init__(self, vm, icon_cache):
-        super().__init__()
+        super().__init__(vm)
         self.vm = vm
 
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('terminal'))
@@ -261,12 +290,12 @@ class RunTerminalItem(Gtk.ImageMenuItem):
                        "run terminal {0}:\n{1}").format(self.vm.name, str(ex)))
 
 
-class OpenFileManagerItem(Gtk.ImageMenuItem):
+class OpenFileManagerItem(HighlightableDomainSubMenuItem):
     """Attempts to open a file manager in the VM. If failed, displayes an
     error message"""
 
     def __init__(self, vm, icon_cache):
-        super().__init__()
+        super().__init__(vm)
         self.vm = vm
 
         img = Gtk.Image.new_from_pixbuf(
@@ -362,35 +391,39 @@ class QubesManagerItem(Gtk.ImageMenuItem):
 
         self.show_all()
 
+def set_highlight_style(widget):
+    css = b"""
+@keyframes animated-highlight {
+from { box-shadow: inset 0px 0px 4px  @theme_selected_bg_color; }
+to   { box-shadow: inset 0px 0px 10px @theme_selected_bg_color; }
+}
+
+.highlighted {
+animation: animated-highlight 1s infinite alternate;
+}
+    """
+    # FIXME set style_provider upon class initialization instead.
+    # It is wasteful otherwise
+    style_provider = Gtk.CssProvider()
+    style_provider.load_from_data(css)
+
+    widget.get_style_context().add_provider(
+        style_provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
 
 def highlight_vm(vm_name):
 
     # HACK to have decorators with arguments
     # https://blog.miguelgrinberg.com/post/the-ultimate-guide-to-python-decorators-part-iii-decorators-with-arguments
     def highlight_decorator(func):
-        css = b"""
-@keyframes animated-highlight {
-    from { box-shadow: inset 0px 0px 4px  @theme_selected_bg_color; }
-    to   { box-shadow: inset 0px 0px 10px @theme_selected_bg_color; }
-}
 
-.highlighted {
-    animation: animated-highlight 1s infinite alternate;
-}
-        """
-        # FIXME set style_provider upon class initialization and no in the
-        # highlight_vm function. This is wasteful.
-        style_provider = Gtk.CssProvider()
-        style_provider.load_from_data(css)
 
         def wrapper(*args):
             self = args[0]
             func(*args)
 
-            self.get_style_context().add_provider(
-                style_provider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-            )
+            set_highlight_style(self)
 
             if self.name.vm == vm_name:
                 self.get_style_context().add_class("highlighted")
@@ -399,7 +432,6 @@ def highlight_vm(vm_name):
 
         return wrapper
     return highlight_decorator
-
 
 class DomainMenuItem(Gtk.ImageMenuItem):
     def __init__(self, vm, app, icon_cache, state=None):
