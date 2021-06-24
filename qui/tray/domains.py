@@ -416,26 +416,18 @@ animation: animated-highlight 1s infinite alternate;
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
     )
 
-def highlight_vm(vm_name):
 
-    # HACK to have decorators with arguments
-    # https://blog.miguelgrinberg.com/post/the-ultimate-guide-to-python-decorators-part-iii-decorators-with-arguments
-    def highlight_decorator(func):
-
-
-        def wrapper(*args):
-            self = args[0]
-            func(*args)
-
-            highlight_condition = self.name.vm == vm_name
-            highlight_if(self, highlight_condition)
-
-        return wrapper
-    return highlight_decorator
-
-class DomainMenuItem(Gtk.ImageMenuItem):
-    def __init__(self, vm, app, icon_cache, state=None):
+class HighlightableDomainMenuItem(Gtk.ImageMenuItem):
+    def __init__(self, vm):
         super().__init__()
+
+        highlight_condition = vm == "sys-net" # FIXME remove hardcode
+        highlight_if(self, highlight_condition)
+
+
+class DomainMenuItem(HighlightableDomainMenuItem):
+    def __init__(self, vm, app, icon_cache, state=None):
+        super().__init__(vm)
         self.vm = vm
         self.app = app
         self.icon_cache = icon_cache
@@ -541,7 +533,6 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         self._set_submenu(state)
 
-    @highlight_vm("sys-net") # FIXME remove hardcode
     def update_stats(self, memory_kb, cpu_usage):
         self.memory.update_state(int(memory_kb))
         self.cpu.update_state(int(cpu_usage))
