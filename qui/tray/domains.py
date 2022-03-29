@@ -15,6 +15,8 @@ from qubesadmin import exc
 from html import escape
 
 import qui.decorators
+from qui.tutorial import QubesDomainTrayTutorialExtension
+import qubes_tutorial.extensions
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gio, Gtk, GObject  # isort:skip
@@ -485,6 +487,9 @@ class DomainTray(Gtk.Application):
         self.dispatcher = dispatcher
         self.stats_dispatcher = stats_dispatcher
 
+        # FIXME add option to enable via arg --tutorial
+        QubesDomainTrayTutorialExtension(self)
+
         self.widget_icon = Gtk.StatusIcon()
         self.widget_icon.set_from_icon_name('qui-domains')
         self.widget_icon.connect('button-press-event', self.show_menu)
@@ -551,6 +556,47 @@ class DomainTray(Gtk.Application):
 
     def show_menu(self, _unused, _event):
         self.tray_menu.popup_at_pointer(None)  # None means current event
+
+    def show_tutorial_path(self, vm_name, action_name):
+        submenu_class_map = {
+            "pause":    PauseItem,
+            "unpause":  UnpauseItem,
+            "shutdown": ShutdownItem,
+            "restart": RestartItem,
+            "kill": KillItem,
+            "preferences": PreferencesItem,
+            "log": LogItem,
+            "run-terminal": RunTerminalItem,
+            "open-file-manager": OpenFileManagerItem
+        }
+        action_item_class = submenu_class_map[action_name]
+        # highlight qube
+        for domain_item in self.tray_menu.get_children():
+            vm = getattr(domain_item, "vm", None)
+            if vm is None: # ignore separator items
+                continue
+            if vm.name == vm_name:
+                qubes_tutorial.extensions.widget_highlight(domain_item)
+
+                # highlight action (e.g. "Shutdown", "Open File Manager", etc.)
+                submenu = domain_item.get_submenu()
+                if submenu is None:
+                    continue
+                for submenu_item in submenu.get_children():
+                    if isinstance(submenu_item, action_item_class):
+                        qubes_tutorial.extensions.widget_highlight(submenu_item)
+
+    def hide_tutorial_path(self):
+        for domain_item in self.tray_menu.get_children():
+            vm = getattr(domain_item, "vm", None)
+            if vm is None: # ignore separator items
+                continue
+            qubes_tutorial.extensions.widget_highlight_remove(domain_item)
+            submenu = domain_item.get_submenu()
+            if submenu is None:
+                continue
+            for submenu_item in submenu.get_children():
+                qubes_tutorial.extensions.widget_highlight_remove(submenu_item)
 
     def emit_notification(self, vm, event, **kwargs):
         notification = Gio.Notification.new(_(

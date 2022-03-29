@@ -59,6 +59,7 @@ Requires:  python%{python3_pkgversion}-qubesadmin >= 4.1.8
 Requires:  qubes-mgmt-salt-dom0-update >= 4.0.5
 %endif
 Requires:  qubes-artwork >= 4.1.5
+Requires:  qubes-tutorial >= 1.0.6
 
 Provides:   qui = %{version}-%{release}
 Obsoletes:  qui < 4.0.0
@@ -113,6 +114,7 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{python3_sitelib}/qui/tray/devices.py
 %{python3_sitelib}/qui/tray/disk_space.py
 %{python3_sitelib}/qui/tray/updates.py
+%{python3_sitelib}/qui/tutorial.py
 
 %{_bindir}/qui-domains
 %{_bindir}/qui-devices
