@@ -554,6 +554,7 @@ class DomainTray(Gtk.Application):
 
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
 
+    @qubes_tutorial.extensions.register("qubes_domains:open")
     def show_menu(self, _unused, _event):
         self.tray_menu.popup_at_pointer(None)  # None means current event
 
