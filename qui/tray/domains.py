@@ -497,6 +497,7 @@ class DomainTray(Gtk.Application):
             _('<b>Qubes Domains</b>\nView and manage running domains.'))
 
         self.tray_menu = Gtk.Menu()
+        self.tray_menu.connect('deactivate', self.hide_menu)
 
         self.icon_cache = IconCache()
 
@@ -557,6 +558,10 @@ class DomainTray(Gtk.Application):
     @qubes_tutorial.extensions.register("qubes_domains:open")
     def show_menu(self, _unused, _event):
         self.tray_menu.popup_at_pointer(None)  # None means current event
+
+    @qubes_tutorial.extensions.register("qubes_domains:close")
+    def hide_menu(self, *args):
+        pass
 
     def show_tutorial_path(self, vm_name, action_name):
         submenu_class_map = {
